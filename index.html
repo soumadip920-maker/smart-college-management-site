@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Smart College Management</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f4f6fb;--card:#fff;--tx:#1b2433;--mu:#6b7686;--pr:#2f5fd0;--bd:#dde3ee;--ok:#1a8a4a;--er:#c53030;color-scheme:light}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10141c;--card:#1a2030;--tx:#e8ecf4;--mu:#97a2b5;--pr:#6f93f0;--bd:#2c3547;--ok:#4cc17e;--er:#f07272;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#10141c;--card:#1a2030;--tx:#e8ecf4;--mu:#97a2b5;--pr:#6f93f0;--bd:#2c3547;--ok:#4cc17e;--er:#f07272;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--pr);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header b{font-size:18px;margin-right:auto}header button{background:#fff2;color:#fff;border:0;padding:6px 12px;border-radius:6px;cursor:pointer}
+nav{display:flex;gap:6px;padding:10px 16px;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--bd)}
+nav a{padding:6px 12px;border-radius:20px;color:var(--tx);text-decoration:none;white-space:nowrap;cursor:pointer}
+nav a.on{background:var(--pr);color:#fff}
+main{max-width:1000px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:16px}
+h2{margin:0 0 12px}h3{margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px}.stat b{font-size:28px;display:block;color:var(--pr)}.stat span{color:var(--mu)}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+label{display:flex;flex-direction:column;font-size:13px;color:var(--mu);gap:3px}
+input,select,textarea{padding:8px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx);font:inherit;width:100%}
+button.p{background:var(--pr);color:#fff;border:0;padding:9px 14px;border-radius:6px;cursor:pointer;font:inherit}
+button.s{background:none;border:1px solid var(--bd);color:var(--tx);padding:4px 9px;border-radius:6px;cursor:pointer;margin-left:4px}
+button.d{color:var(--er)}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--bd);white-space:nowrap}th{color:var(--mu);font-size:13px}
+.msg{padding:9px 12px;border-radius:6px;margin-bottom:12px}.msg.success{background:#1a8a4a22;color:var(--ok)}.msg.error{background:#c5303022;color:var(--er)}
+.hero{text-align:center;padding:48px 16px}.hero h1{font-size:34px;margin:0 0 8px}.hero p{color:var(--mu)}
+.empty{color:var(--mu);padding:8px 0}.login{max-width:340px;margin:40px auto}.login form{grid-template-columns:1fr}
+.n{border-bottom:1px solid var(--bd);padding:8px 0}.n small{color:var(--mu)}
+</style></head><body>
+<header><b>🎓 Smart College Management</b><button id="th">Theme</button><button id="lo" hidden>Logout</button></header>
+<nav id="nav"></nav><main id="app"></main>
+<script>
+var KEY='scm_v1',Z=function(d){return new Date(d||Date.now()).toISOString().slice(0,10)};
+var D={students:[],teachers:[],courses:[],attendance:[],exams:[],results:[],fees:[],notices:[],n:1,admin:false};
+try{var s=localStorage.getItem(KEY);if(s)D=JSON.parse(s)}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){}}
+var M={
+students:{t:'Students',f:[['name','Name','text'],['email','Email','email'],['course','Course','ref','courses','course_name',1],['phone','Phone','text',,,1]],req:['name','email']},
+teachers:{t:'Teachers',f:[['name','Name','text'],['subject','Subject','text'],['email','Email','email']],req:['name','subject','email']},
+courses:{t:'Courses',f:[['course_name','Course name','text'],['duration','Duration','text',,,1]],req:['course_name']},
+attendance:{t:'Attendance',f:[['student','Student','ref','students','name'],['date','Date','date'],['status','Status','sel',['Present','Absent']]],key:['student','date'],req:['student','date','status']},
+exams:{t:'Examinations',f:[['name','Exam name','text'],['date','Exam date','date']],req:['name','date']},
+results:{t:'Results',f:[['student','Student','ref','students','name'],['exam','Exam','ref','exams','name'],['subject','Subject','text'],['marks','Marks obtained','number'],['total','Total marks','number']],key:['student','exam','subject'],req:['student','exam','subject','marks','total']},
+fees:{t:'Fees',f:[['student','Student','ref','students','name'],['amount','Amount (₹)','number'],['due','Due date','date']],req:['student','amount','due']},
+notices:{t:'Notices',f:[['title','Title','text'],['body','Notice','area']],req:['title','body']}};
+var tab='home',flash=null;
+function esc(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function lbl(f,v){if(f[2]!='ref')return v;var r=D[f[3]].find(function(x){return x.id==v});return r?r[f[4]]:'—'}
+function go(t){tab=t;flash=null;draw()}
+function draw(){
+ document.getElementById('lo').hidden=!D.admin;
+ var nav=document.getElementById('nav'),a=document.getElementById('app');
+ if(!D.admin){nav.innerHTML='';a.innerHTML=tab=='login'?loginV():homeV();return}
+ var tabs=['dashboard'].concat(Object.keys(M));
+ if(tabs.indexOf(tab)<0)tab='dashboard';
+ nav.innerHTML=tabs.map(function(t){return'<a class="'+(t==tab?'on':'')+'" onclick="go(\''+t+'\')">'+(t=='dashboard'?'Dashboard':M[t].t)+'</a>'}).join('');
+ a.innerHTML=(flash?'<div class="msg '+flash[1]+'">'+esc(flash[0])+'</div>':'')+(tab=='dashboard'?dashV():modV(tab));
+}
+function homeV(){return'<div class="hero"><h1>Smart College Management System</h1><p>Students, teachers, courses, attendance, exams, results, fees and notices in one place.</p><button class="p" onclick="go(\'login\')">Admin login</button></div>'}
+function loginV(){return'<div class="card login"><h2>Admin login</h2>'+(flash?'<div class="msg error">'+esc(flash[0])+'</div>':'')+'<form onsubmit="return login(this)"><label>Username<input name="u" autocomplete="username" required></label><label>Password<input name="p" type="password" autocomplete="current-password" required></label><button class="p">Login</button></form><p class="empty">Demo: admin / admin123</p></div>'}
+function login(f){if(f.u.value.trim()=='admin'&&f.p.value=='admin123'){D.admin=true;save();tab='dashboard';flash=null}else flash=['Incorrect username or password.','error'];draw();return false}
+function dashV(){
+ var pend=D.fees.filter(function(x){return x.status!='Paid'}).length,tod=D.attendance.filter(function(x){return x.date==Z()}).length;
+ var st=[['Students',D.students.length],['Teachers',D.teachers.length],['Courses',D.courses.length],['Attendance today',tod],['Pending fees',pend]];
+ return'<h2>Dashboard</h2><div class="grid">'+st.map(function(s){return'<div class="stat"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'}).join('')+'</div><div class="card" style="margin-top:16px"><h3>Latest notices</h3>'+(D.notices.length?D.notices.slice(-3).reverse().map(function(n){return'<div class="n"><b>'+esc(n.title)+'</b><br>'+esc(n.body)+'</div>'}).join(''):'<div class="empty">No notices yet.</div>')+'</div>'}
+function modV(k){
+ var m=M[k],h='<h2>'+m.t+'</h2><div class="card"><form onsubmit="return add(\''+k+'\',this)">';
+ m.f.forEach(function(f){var n=f[0],c='';
+  if(f[2]=='ref')c='<select name="'+n+'"><option value="">'+(f[5]?'— none —':'Select')+'</option>'+D[f[3]].map(function(r){return'<option value="'+r.id+'">'+esc(r[f[4]])+'</option>'}).join('')+'</select>';
+  else if(f[2]=='sel')c='<select name="'+n+'">'+f[3].map(function(o){return'<option>'+o+'</option>'}).join('')+'</select>';
+  else if(f[2]=='area')c='<textarea name="'+n+'" rows="2"></textarea>';
+  else c='<input name="'+n+'" type="'+f[2]+'"'+(f[2]=='number'?' step="any" min="0"':'')+(f[2]=='date'&&(k=='attendance')?' value="'+Z()+'"':'')+'>';
+  h+='<label>'+f[1]+c+'</label>'});
+ h+='<button class="p">Save</button></form></div><div class="card tw">';
+ var rows=D[k].slice().reverse();
+ if(!rows.length)return h+'<div class="empty">Nothing here yet.</div></div>';
+ h+='<table><tr>'+m.f.map(function(f){return'<th>'+f[1]+'</th>'}).join('')+(k=='fees'?'<th>Status</th>':'')+'<th></th></tr>';
+ rows.forEach(function(r){h+='<tr>'+m.f.map(function(f){return'<td>'+esc(lbl(f,r[f[0]]))+'</td>'}).join('')+(k=='fees'?'<td>'+(r.status=='Paid'?'Paid ('+r.paid+')':'Pending')+'</td>':'')+'<td>'+(k=='fees'&&r.status!='Paid'?'<button class="s" onclick="pay('+r.id+')">Mark paid</button>':'')+'<button class="s d" onclick="del(\''+k+'\','+r.id+')">Delete</button></td></tr>'});
+ return h+'</table></div>'}
+function add(k,f){
+ var m=M[k],o={};
+ m.f.forEach(function(x){o[x[0]]=f.elements[x[0]].value.trim()});
+ var bad=m.req.some(function(r){return!o[r]});
+ if(!bad&&k=='results'){var a=+o.marks,b=+o.total;bad=!(a>=0&&b>0&&a<=b)}
+ if(bad){flash=[k=='results'?'Enter valid marks. Obtained marks cannot exceed total marks.':'Please fill in all required fields.','error'];draw();return false}
+ var ex=m.key&&D[k].find(function(r){return m.key.every(function(c){return r[c]==o[c]})});
+ if(ex)Object.assign(ex,o);else{o.id=D.n++;if(k=='fees')o.status='Pending';if(k=='notices')o.at=Z();D[k].push(o)}
+ save();flash=[m.t+' saved.','success'];draw();return false}
+function del(k,id){if(!confirm('Delete this record?'))return;D[k]=D[k].filter(function(r){return r.id!=id});
+ if(k=='students')['attendance','results','fees'].forEach(function(t){D[t]=D[t].filter(function(r){return r.student!=id})});
+ if(k=='exams')D.results=D.results.filter(function(r){return r.exam!=id});
+ if(k=='courses')D.students.forEach(function(s){if(s.course==id)s.course=''});
+ save();flash=['Deleted.','success'];draw()}
+function pay(id){var r=D.fees.find(function(x){return x.id==id});r.status='Paid';r.paid=Z();save();flash=['Fee marked as paid.','success'];draw()}
+document.getElementById('lo').onclick=function(){D.admin=false;save();tab='home';draw()};
+document.getElementById('th').onclick=function(){var r=document.documentElement,d=r.getAttribute('data-theme')=='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme:dark)').matches);r.setAttribute('data-theme',d?'light':'dark')};
+draw();
+</script></body></html>
